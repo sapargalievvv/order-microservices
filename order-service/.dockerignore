@@ -1,0 +1,25 @@
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Переменные окружения и секреты
+.env
+.env.*
+!.env.example
+
+# Git и Docker
+.git/
+.gitignore
+Dockerfile
+docker-compose*.yml
+
+# IDE и системные файлы
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 1. ИНФРАСТРУКТУРА (БД, Кеш, Брокер)
+  # ==========================================
+
+  # База данных для User Service
+  users_db:
+    image: postgres:16-alpine
+    container_name: users_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - users_postgres_data:/var/lib/postgresql/data
+
+  # База данных для Order Service
+  orders_db:
+    image: postgres:16-alpine
+    container_name: orders_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orders_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - orders_postgres_data:/var/lib/postgresql/data
+
+  # Кеш Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+
+  # Брокер сообщений Kafka (в режиме KRaft без Zookeeper)
+  # Брокер сообщений Kafka (Официальный образ Apache в режиме KRaft)
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+
+  # ==========================================
+  # 2. МИКРОСЕРВИСЫ
+  # ==========================================
+
+  user_service:
+    build:
+      context: ./user-service
+    container_name: user_service
+    ports:
+      - "8001:8001"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=users_db
+      - POSTGRES_PORT=5432
+      - USERS_DB_NAME=users_db
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_LIFETIME_SECONDS=${JWT_LIFETIME_SECONDS}
+    depends_on:
+      - users_db
+
+  order_service:
+    build:
+      context: ./order-service
+    container_name: order-service
+    ports:
+      - "8002:8002"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=orders_db
+      - POSTGRES_PORT=5432
+      - ORDERS_DB_NAME=orders_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - orders_db
+      - redis
+      - kafka
+
+  notification_service:
+    build:
+      context: ./notification-service
+    container_name: notification_service
+    ports:
+      - "8003:8003"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - kafka
+
+volumes:
+  users_postgres_data:
+  orders_postgres_data:
