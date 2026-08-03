@@ -4,7 +4,7 @@ from app.db.models import OrderStatus
 
 
 class OrderCreate(BaseModel):
-    user_id: int
+    # user_id: int
     title: str
     amount: float
 

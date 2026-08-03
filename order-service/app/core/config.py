@@ -10,18 +10,22 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5433
+    POSTGRES_ORDERS_DB_PORT: int = 5433
     ORDERS_DB_NAME: str = "orders_db"
 
     # Redis Config
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    JWT_SECRET: str
 
     # Kafka Config
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9094"
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
+        env_file="../.env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
     )
 
     @property
@@ -31,7 +35,7 @@ class Settings(BaseSettings):
         """
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.ORDERS_DB_NAME}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_ORDERS_DB_PORT}/{self.ORDERS_DB_NAME}"
         )
 
     @property
@@ -43,3 +47,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+print(settings.database_url)

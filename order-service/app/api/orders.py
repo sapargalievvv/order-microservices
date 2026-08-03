@@ -11,6 +11,7 @@ from app.db.models import Order, OrderStatus
 from app.db.session import get_db
 from app.schemas.order import OrderCreate, OrderResponse
 from app.services.kafka_producer import send_order_created_event
+from app.core.auth import get_current_user_id
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -29,9 +30,13 @@ async def get_alL_orders(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def create_order(order_in: OrderCreate, db: AsyncSession = Depends(get_db)):
+async def create_order(
+    order_in: OrderCreate,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
     new_order = Order(
-        user_id=order_in.user_id,
+        user_id=user_id,
         title=order_in.title,
         amount=order_in.amount,
         # status=OrderStatus.PENDING,  # <-- Используем Enum значение

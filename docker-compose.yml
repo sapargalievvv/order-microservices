@@ -106,10 +106,31 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - orders_db
       - redis
       - kafka
+
+  products_service:
+    build:
+      context: ./products-service
+    container_name: products_service
+    ports:
+    
+      - "8004:8004"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=products_db
+      - POSTGRES_PORT=5432
+      - PRODUCTS_DB_NAME=products_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - products_db
+      - redis
 
   notification_service:
     build:

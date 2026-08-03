@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from app.api.deps import get_product_service
+from app.core.auth import get_current_user_id
 from app.db.models import Product
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 from app.services.product_service import ProductService
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -26,6 +26,7 @@ async def list_products(service: ProductService = Depends(get_product_service)):
 async def create_product(
     product_in: ProductCreate,
     service: ProductService = Depends(get_product_service),
+    user_id: str = Depends(get_current_user_id),
 ):
     return await service.create(product_in)
 
@@ -46,6 +47,7 @@ async def update_product(
     product_id: int,
     product_in: ProductUpdate,
     service: ProductService = Depends(get_product_service),
+    user_id: str = Depends(get_current_user_id),
 ):
     product = await get_product_or_404(product_id, service)
     return await service.update(product, product_in)
@@ -55,6 +57,7 @@ async def update_product(
 async def delete_product(
     product_id: int,
     service: ProductService = Depends(get_product_service),
+    user_id: str = Depends(get_current_user_id),
 ):
     product = await get_product_or_404(product_id, service)
     await service.delete(product)

@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Каталог — Products Service</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --surface: #171a21;
+      --surface-2: #1e222b;
+      --border: #2a2f3a;
+      --text: #e6e8ec;
+      --muted: #9aa2b1;
+      --accent: #4f7cff;
+      --danger: #ff5f56;
+      --ok: #35c47d;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 24px;
+      background: rgba(15, 17, 21, .85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-weight: 600;
+      letter-spacing: -.01em;
+    }
+
+    .logo span {
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 8px;
+      font-size: 13px;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      font: inherit;
+      color: inherit;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+    }
+
+    button {
+      cursor: pointer;
+      background: var(--surface-2);
+    }
+
+    button:hover {
+      border-color: #3b4250;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    button.ghost {
+      background: transparent;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .toolbar input[type=search] {
+      min-width: 260px;
+      flex: 1;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .15s ease, border-color .15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: #39404e;
+    }
+
+    .card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--surface-2);
+    }
+
+    .card-body {
+      padding: 12px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 550;
+    }
+
+    .card .desc {
+      color: var(--muted);
+      font-size: 12px;
+      flex: 1;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .price {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .stock {
+      font-size: 12px;
+      color: var(--ok);
+    }
+
+    .stock.out {
+      color: var(--danger);
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .badge.mock {
+      border-color: #6b5b1f;
+      color: #e0c05a;
+      background: #241f0d;
+    }
+
+    .badge.live {
+      border-color: #1f5b3a;
+      color: var(--ok);
+      background: #0d2418;
+    }
+
+    dialog {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      width: min(420px, 92vw);
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, .6);
+    }
+
+    .dialog-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dialog-body h2 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    label input {
+      color: var(--text);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    .error {
+      color: var(--danger);
+      font-size: 12px;
+      min-height: 16px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 48px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">Каталог <span>products-service</span></div>
+    <span id="source" class="badge mock">моки</span>
+    <div class="spacer"></div>
+    <span id="user" class="badge" hidden></span>
+    <button id="btn-add" class="primary" hidden>+ Товар</button>
+    <button id="btn-auth" class="ghost">Войти</button>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Поиск по названию…" />
+      <select id="sort">
+        <option value="name">По названию</option>
+        <option value="price-asc">Цена ↑</option>
+        <option value="price-desc">Цена ↓</option>
+        <option value="stock">По остатку</option>
+      </select>
+      <label style="flex-direction: row; align-items: center; gap: 6px;">
+        <input id="in-stock" type="checkbox" style="width:auto" /> только в наличии
+      </label>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>Ничего не найдено</div>
+  </main>
+
+  <dialog id="dlg-auth">
+    <form class="dialog-body" method="dialog">
+      <h2>Вход</h2>
+      <label>Email <input id="auth-email" type="email" value="test@test.com" required /></label>
+      <label>Пароль <input id="auth-password" type="password" value="secret123" required /></label>
+      <div class="error" id="auth-error"></div>
+      <div class="actions">
+        <button value="cancel" class="ghost">Отмена</button>
+        <button id="auth-submit" value="ok" class="primary">Войти</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-product">
+    <form class="dialog-body" method="dialog">
+      <h2>Новый товар</h2>
+      <label>Название <input id="p-name" required /></label>
+      <label>Описание <input id="p-desc" /></label>
+      <label>Цена <input id="p-price" type="number" step="0.01" min="0.01" required /></label>
+      <label>Остаток <input id="p-stock" type="number" min="0" value="0" /></label>
+      <div class="error" id="p-error"></div>
+      <div class="actions">
+        <button value="cancel" class="ghost">Отмена</button>
+        <button value="ok" class="primary">Создать</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    // ============================================================
+    // Пока фронт работает на моках. Чтобы переключить на реальный
+    // products-service: USE_MOCKS = false (и включить CORS в сервисе).
+    // ============================================================
+    const USE_MOCKS = true;
+    const API = "http://localhost:8004";
+    const AUTH_API = "http://localhost:8001";
+
+    const CATEGORIES = ["Мышь", "Клавиатура", "Монитор", "Наушники", "Ноутбук", "Веб-камера", "Микрофон", "SSD", "Роутер", "Powerbank"];
+    const BRANDS = ["Logitech", "Keychron", "Samsung", "Xiaomi", "HyperX", "ASUS", "Sony", "Acer"];
+    const SUFFIXES = ["Pro", "Lite", "Max", "Air", "Ultra"];
+
+    // Повторяет структуру ответа GET /products/
+    function buildMocks(n = 24) {
+      return Array.from({ length: n }, (_, i) => {
+        const category = CATEGORIES[i % CATEGORIES.length];
+        const brand = BRANDS[i % BRANDS.length];
+        return {
+          id: i + 2,
+          name: `${brand} ${category} ${SUFFIXES[i % SUFFIXES.length]} ${i + 1}`,
+          description: `${category} ${brand} для дома и офиса`,
+          price: (1990 + ((i * 7919) % 90000)).toFixed(2),
+          stock: (i * 37) % 121,
+          image_url: `https://picsum.photos/seed/product${i + 1}/600/600`,
+          created_at: new Date(Date.now() - i * 36e5).toISOString(),
+        };
+      });
+    }
+
+    const state = {
+      products: [],
+      token: localStorage.getItem("token"),
+      email: localStorage.getItem("email"),
+    };
+
+    // ---------- слой данных: одно место, где живёт mock/real ----------
+    const api = {
+      async list() {
+        if (USE_MOCKS) return buildMocks();
+        const r = await fetch(`${API}/products/`);
+        if (!r.ok) throw new Error(`GET /products/ → ${r.status}`);
+        return r.json();
+      },
+
+      async login(email, password) {
+        if (USE_MOCKS) return "mock-token";
+        const body = new URLSearchParams({ username: email, password });
+        const r = await fetch(`${AUTH_API}/auth/jwt/login`, { method: "POST", body });
+        if (!r.ok) throw new Error("Неверный email или пароль");
+        return (await r.json()).access_token;
+      },
+
+      async create(payload) {
+        if (USE_MOCKS) {
+          const id = Math.max(...state.products.map(p => p.id)) + 1;
+          return {
+            ...payload, id, image_url: `https://picsum.photos/seed/new${id}/600/600`,
+            created_at: new Date().toISOString()
+          };
+        }
+        const r = await fetch(`${API}/products/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.token}` },
+          body: JSON.stringify(payload),
+        });
+        if (r.status === 401) throw new Error("Токен истёк — войди заново");
+        if (!r.ok) throw new Error(`POST /products/ → ${r.status}`);
+        return r.json();
+      },
+    };
+
+    // ---------- рендер ----------
+    const fmt = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "KZT", maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+
+    function visibleProducts() {
+      const q = $("search").value.trim().toLowerCase();
+      const onlyStock = $("in-stock").checked;
+      let items = state.products.filter(p =>
+        (!q || p.name.toLowerCase().includes(q)) && (!onlyStock || p.stock > 0)
+      );
+      const sort = $("sort").value;
+      items.sort((a, b) =>
+        sort === "price-asc" ? a.price - b.price :
+          sort === "price-desc" ? b.price - a.price :
+            sort === "stock" ? b.stock - a.stock :
+              a.name.localeCompare(b.name, "ru")
+      );
+      return items;
+    }
+
+    function render() {
+      const items = visibleProducts();
+      $("empty").hidden = items.length > 0;
+      $("grid").innerHTML = items.map(p => `
+    <article class="card">
+      <img src="${p.image_url}" alt="" loading="lazy" />
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <div class="desc">${p.description ?? ""}</div>
+        <div class="row">
+          <span class="price">${fmt.format(p.price)}</span>
+          <span class="stock ${p.stock ? "" : "out"}">${p.stock ? `${p.stock} шт` : "нет"}</span>
+        </div>
+      </div>
+    </article>
+  `).join("");
+    }
+
+    function renderAuth() {
+      const authed = Boolean(state.token);
+      $("user").hidden = !authed;
+      $("user").textContent = state.email ?? "";
+      $("btn-add").hidden = !authed;
+      $("btn-auth").textContent = authed ? "Выйти" : "Войти";
+      $("source").className = `badge ${USE_MOCKS ? "mock" : "live"}`;
+      $("source").textContent = USE_MOCKS ? "моки" : "live api";
+    }
+
+    // ---------- события ----------
+    ["search", "sort", "in-stock"].forEach(id => $(id).addEventListener("input", render));
+
+    $("btn-auth").addEventListener("click", () => {
+      if (state.token) {
+        state.token = state.email = null;
+        localStorage.clear();
+        renderAuth();
+      } else {
+        $("auth-error").textContent = "";
+        $("dlg-auth").showModal();
+      }
+    });
+
+    $("dlg-auth").addEventListener("close", async (e) => {
+      if ($("dlg-auth").returnValue !== "ok") return;
+      try {
+        const email = $("auth-email").value;
+        state.token = await api.login(email, $("auth-password").value);
+        state.email = email;
+        localStorage.setItem("token", state.token);
+        localStorage.setItem("email", email);
+        renderAuth();
+      } catch (err) {
+        $("auth-error").textContent = err.message;
+        $("dlg-auth").showModal();
+      }
+    });
+
+    $("btn-add").addEventListener("click", () => {
+      $("p-error").textContent = "";
+      $("dlg-product").showModal();
+    });
+
+    $("dlg-product").addEventListener("close", async () => {
+      if ($("dlg-product").returnValue !== "ok") return;
+      try {
+        const created = await api.create({
+          name: $("p-name").value,
+          description: $("p-desc").value || null,
+          price: $("p-price").value,
+          stock: Number($("p-stock").value),
+        });
+        state.products.unshift(created);
+        render();
+      } catch (err) {
+        $("p-error").textContent = err.message;
+        $("dlg-product").showModal();
+      }
+    });
+
+    // ---------- старт ----------
+    (async () => {
+      renderAuth();
+      try {
+        state.products = await api.list();
+      } catch (err) {
+        $("empty").hidden = false;
+        $("empty").textContent = `Не удалось загрузить каталог: ${err.message}`;
+      }
+      render();
+    })();
+  </script>
+</body>
+
+</html>
