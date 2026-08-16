@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5434
     PRODUCTS_DB_NAME: str = "products_db"
 
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9094"
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 

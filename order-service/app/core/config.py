@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # Kafka Config
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9094"
 
+    PRODUCT_SERVICE_ULR: str = "http://127.0.0.1:8000"
+
     model_config = SettingsConfigDict(
         env_file="../.env",
         env_file_encoding="utf-8",

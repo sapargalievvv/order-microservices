@@ -128,9 +128,11 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - products_db
       - redis
+      - kafka
 
   notification_service:
     build:

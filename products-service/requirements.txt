@@ -6,3 +6,4 @@ pydantic-settings>=2.2.1
 alembic>=1.13.1
 redis>=5.0.3
 pyjwt>=2.8.0
+aiokafka>=0.10.0

@@ -4,6 +4,9 @@ from app.db.models import Product
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 from app.services.product_service import ProductService
 from fastapi import APIRouter, Depends, HTTPException, status
+from app.services.kafka_producer import send_stock_changed_event
+from app.schemas.reserve import ReserveRequest, ReserveResponse
+from app.services.exceptions import InsufficientStock, ProductNotFound
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -47,10 +50,18 @@ async def update_product(
     product_id: int,
     product_in: ProductUpdate,
     service: ProductService = Depends(get_product_service),
-    user_id: str = Depends(get_current_user_id),
+    # user_id: str = Depends(get_current_user_id),
 ):
     product = await get_product_or_404(product_id, service)
-    return await service.update(product, product_in)
+    fields = product_in.model_dump(exclude_unset=True)
+    old_stock = product.stock
+    product = await service.update(product, product_in)
+
+    if "stock" in fields and old_stock != product.stock:
+        await send_stock_changed_event(
+            product_id, product.name, old_stock, product.stock
+        )
+    return product
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -61,3 +72,28 @@ async def delete_product(
 ):
     product = await get_product_or_404(product_id, service)
     await service.delete(product)
+
+
+@router.post("/internal/reserve", response_model=ReserveResponse)
+async def reserve_products(
+    reserve_request: ReserveRequest,
+    service: ProductService = Depends(get_product_service),
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        return await service.process_order_items(reserve_request.items)
+    except ProductNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "products_not_found", "product_ids": sorted(exc.product_ids)},
+        )
+    except InsufficientStock as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "insufficient_stock",
+                "product_id": exc.product_id,
+                "requested": exc.requested,
+                "available": exc.available,
+            },
+        )
