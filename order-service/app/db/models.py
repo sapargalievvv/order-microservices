@@ -1,5 +1,4 @@
 import enum
-from datetime import datetime, timezone
 
 from sqlalchemy import (
     CheckConstraint,
@@ -10,6 +9,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy import (
     Enum as SQLEnum,
@@ -41,7 +41,7 @@ class Order(Base):
     )
 
     created_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     items = relationship("OrderItem", cascade="all, delete-orphan")

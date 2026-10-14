@@ -84,6 +84,11 @@
       border-color: #3b4250;
     }
 
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
     button.primary {
       background: var(--accent);
       border-color: var(--accent);
@@ -185,6 +190,38 @@
       color: var(--danger);
     }
 
+    .card-actions {
+      margin-top: 4px;
+    }
+
+    .card-actions button {
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .card-actions .add {
+      width: 100%;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stepper button {
+      width: 32px;
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    .stepper .qty {
+      flex: 1;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+    }
+
     .badge {
       font-size: 11px;
       padding: 2px 8px;
@@ -212,6 +249,10 @@
       border-radius: var(--radius);
       padding: 0;
       width: min(420px, 92vw);
+    }
+
+    dialog.wide {
+      width: min(560px, 92vw);
     }
 
     dialog::backdrop {
@@ -260,6 +301,75 @@
       padding: 48px;
       text-align: center;
     }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 52vh;
+      overflow: auto;
+    }
+
+    .line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    button.line {
+      cursor: pointer;
+    }
+
+    .line .name {
+      flex: 1;
+      font-size: 13px;
+      min-width: 0;
+    }
+
+    .line .name small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .total {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .status.PAID,
+    .status.CONFIRMED {
+      border-color: #1f5b3a;
+      color: var(--ok);
+    }
+
+    .status.CANCELLED {
+      border-color: #5b1f1f;
+      color: var(--danger);
+    }
   </style>
 </head>
 
@@ -270,6 +380,8 @@
     <span id="source" class="badge mock">моки</span>
     <div class="spacer"></div>
     <span id="user" class="badge" hidden></span>
+    <button id="btn-orders" class="ghost" hidden>Мои заказы</button>
+    <button id="btn-cart" class="ghost">Корзина · 0</button>
     <button id="btn-add" class="primary" hidden>+ Товар</button>
     <button id="btn-auth" class="ghost">Войти</button>
   </header>
@@ -320,18 +432,76 @@
     </form>
   </dialog>
 
+  <dialog id="dlg-cart" class="wide">
+    <div class="dialog-body">
+      <h2>Корзина</h2>
+      <div id="cart-list" class="list"></div>
+      <div class="total"><span>Итого</span><span id="cart-total"></span></div>
+      <div class="error" id="cart-error"></div>
+      <div class="actions">
+        <button class="ghost" data-close>Закрыть</button>
+        <button id="cart-submit" class="primary">Оформить заказ</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-pay">
+    <form class="dialog-body" id="pay-form">
+      <h2>Оплата</h2>
+      <div class="total"><span>К оплате</span><span id="pay-total"></span></div>
+      <label>Номер карты <input id="pay-card" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000"
+          required /></label>
+      <div class="muted">Платёжного провайдера нет — оплата имитируется на фронте</div>
+      <div class="error" id="pay-error"></div>
+      <div class="actions">
+        <button type="button" class="ghost" data-close>Отмена</button>
+        <button type="submit" id="pay-submit" class="primary">Оплатить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-orders" class="wide">
+    <div class="dialog-body">
+      <h2>Мои заказы</h2>
+      <div id="orders-list" class="list"></div>
+      <div class="error" id="orders-error"></div>
+      <div class="actions">
+        <button class="ghost" data-close>Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-order" class="wide">
+    <div class="dialog-body">
+      <h2 id="order-title">Заказ</h2>
+      <div id="order-meta" class="muted"></div>
+      <div id="order-list" class="list"></div>
+      <div class="total"><span>Сумма</span><span id="order-total"></span></div>
+      <div class="actions">
+        <button class="ghost" data-close>Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
   <script>
     // ============================================================
     // Пока фронт работает на моках. Чтобы переключить на реальный
     // products-service: USE_MOCKS = false (и включить CORS в сервисе).
     // ============================================================
-    const USE_MOCKS = true;
-    const API = "http://localhost:8004";
-    const AUTH_API = "http://localhost:8001";
+    const USE_MOCKS = false;
+    const API = "http://localhost:8000";
+    const AUTH_API = "http://localhost:8000";
 
     const CATEGORIES = ["Мышь", "Клавиатура", "Монитор", "Наушники", "Ноутбук", "Веб-камера", "Микрофон", "SSD", "Роутер", "Powerbank"];
     const BRANDS = ["Logitech", "Keychron", "Samsung", "Xiaomi", "HyperX", "ASUS", "Sony", "Acer"];
     const SUFFIXES = ["Pro", "Lite", "Max", "Air", "Ultra"];
+
+    const STATUS_LABELS = {
+      PENDING: "ожидает",
+      PAID: "оплачен",
+      CONFIRMED: "подтверждён",
+      CANCELLED: "отменён",
+    };
 
     // Повторяет структуру ответа GET /products/
     function buildMocks(n = 24) {
@@ -350,13 +520,33 @@
       });
     }
 
+    // Мок-хранилище заказов: живёт только в памяти вкладки
+    const mockOrders = [];
+    let mockOrderId = 1;
+
     const state = {
       products: [],
+      orders: [],
+      cart: JSON.parse(localStorage.getItem("cart") ?? "{}"),   // { [product_id]: quantity }
       token: localStorage.getItem("token"),
       email: localStorage.getItem("email"),
     };
 
     // ---------- слой данных: одно место, где живёт mock/real ----------
+    function authHeaders() {
+      return { "Content-Type": "application/json", Authorization: `Bearer ${state.token}` };
+    }
+
+    // Гейтвей отдаёт ошибки как {"detail": ...}; detail может быть и объектом
+    async function apiError(r, what) {
+      if (r.status === 401) return new Error("Токен истёк — войди заново");
+      try {
+        const { detail } = await r.json();
+        if (detail) return new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      } catch { /* тело не JSON */ }
+      return new Error(`${what} → ${r.status}`);
+    }
+
     const api = {
       async list() {
         if (USE_MOCKS) return buildMocks();
@@ -383,17 +573,57 @@
         }
         const r = await fetch(`${API}/products/`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.token}` },
+          headers: authHeaders(),
           body: JSON.stringify(payload),
         });
-        if (r.status === 401) throw new Error("Токен истёк — войди заново");
-        if (!r.ok) throw new Error(`POST /products/ → ${r.status}`);
+        if (!r.ok) throw await apiError(r, "POST /products/");
+        return r.json();
+      },
+
+      async createOrder(order_items) {
+        if (USE_MOCKS) {
+          const items = order_items.map((it, i) => {
+            const p = state.products.find(p => p.id === it.product_id);
+            return { id: i + 1, order_id: mockOrderId, product_id: it.product_id, name: p.name, price: p.price, quantity: it.quantity };
+          });
+          const order = {
+            id: mockOrderId++,
+            user_id: state.email ?? "mock-user",
+            status: "PAID",
+            created_at: new Date().toISOString(),
+            amount: items.reduce((s, it) => s + it.price * it.quantity, 0).toFixed(2),
+            items,
+          };
+          mockOrders.unshift(order);
+          return order;
+        }
+        const r = await fetch(`${API}/orders/`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ order_items }),
+        });
+        if (!r.ok) throw await apiError(r, "POST /orders/");
+        return r.json();
+      },
+
+      async listOrders() {
+        if (USE_MOCKS) return mockOrders;
+        const r = await fetch(`${API}/orders/`, { headers: authHeaders() });
+        if (!r.ok) throw await apiError(r, "GET /orders/");
+        return r.json();
+      },
+
+      async getOrder(id) {
+        if (USE_MOCKS) return mockOrders.find(o => o.id === id);
+        const r = await fetch(`${API}/orders/${id}`, { headers: authHeaders() });
+        if (!r.ok) throw await apiError(r, `GET /orders/${id}`);
         return r.json();
       },
     };
 
     // ---------- рендер ----------
     const fmt = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "KZT", maximumFractionDigits: 0 });
+    const dateFmt = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" });
     const $ = (id) => document.getElementById(id);
 
     function visibleProducts() {
@@ -408,8 +638,44 @@
           sort === "price-desc" ? b.price - a.price :
             sort === "stock" ? b.stock - a.stock :
               a.name.localeCompare(b.name, "ru")
+
       );
       return items;
+    }
+
+    function cartCount() {
+      return Object.values(state.cart).reduce((s, q) => s + q, 0);
+    }
+
+    // Строки корзины собираем из каталога: в localStorage лежат только id и количество
+    function cartLines() {
+      return Object.entries(state.cart)
+        .map(([id, quantity]) => ({ product: state.products.find(p => p.id === Number(id)), quantity }))
+        .filter(line => line.product);
+    }
+
+    function setQty(productId, quantity) {
+      const product = state.products.find(p => p.id === productId);
+      const max = product?.stock ?? 0;
+      const next = Math.min(Math.max(quantity, 0), max);
+      if (next > 0) state.cart[productId] = next;
+      else delete state.cart[productId];
+      localStorage.setItem("cart", JSON.stringify(state.cart));
+      render();
+      renderCart();
+    }
+
+    function cardActions(p) {
+      const qty = state.cart[p.id] ?? 0;
+      if (!qty) {
+        return `<button class="primary add" data-act="add" data-id="${p.id}" ${p.stock ? "" : "disabled"}>В корзину</button>`;
+      }
+      return `
+        <div class="stepper">
+          <button data-act="dec" data-id="${p.id}">−</button>
+          <span class="qty">${qty} шт</span>
+          <button data-act="inc" data-id="${p.id}" ${qty >= p.stock ? "disabled" : ""}>+</button>
+        </div>`;
     }
 
     function render() {
@@ -425,9 +691,53 @@
           <span class="price">${fmt.format(p.price)}</span>
           <span class="stock ${p.stock ? "" : "out"}">${p.stock ? `${p.stock} шт` : "нет"}</span>
         </div>
+        <div class="card-actions">${cardActions(p)}</div>
       </div>
     </article>
   `).join("");
+      $("btn-cart").textContent = `Корзина · ${cartCount()}`;
+    }
+
+    function renderCart() {
+      const lines = cartLines();
+      $("cart-list").innerHTML = lines.length
+        ? lines.map(({ product, quantity }) => `
+          <div class="line">
+            <span class="name">${product.name}<small>${fmt.format(product.price)} × ${quantity}</small></span>
+            <span class="stepper">
+              <button data-act="dec" data-id="${product.id}">−</button>
+              <span class="qty">${quantity}</span>
+              <button data-act="inc" data-id="${product.id}" ${quantity >= product.stock ? "disabled" : ""}>+</button>
+              <button data-act="del" data-id="${product.id}">✕</button>
+            </span>
+          </div>`).join("")
+        : `<div class="muted">Корзина пуста</div>`;
+      const total = lines.reduce((s, l) => s + l.product.price * l.quantity, 0);
+      $("cart-total").textContent = fmt.format(total);
+      $("cart-submit").disabled = lines.length === 0;
+    }
+
+    function renderOrders() {
+      $("orders-list").innerHTML = state.orders.length
+        ? state.orders.map((o, i) => `
+          <button class="line" data-idx="${i}">
+            <span class="name">Заказ ${o.id ? "№" + o.id : ""}<small>${dateFmt.format(new Date(o.created_at))} · ${o.items.length} поз.</small></span>
+            <span class="price">${fmt.format(o.amount)}</span>
+            <span class="status ${o.status}">${STATUS_LABELS[o.status] ?? o.status}</span>
+          </button>`).join("")
+        : `<div class="muted">Заказов пока нет</div>`;
+    }
+
+    function renderOrder(order) {
+      $("order-title").textContent = order.id ? `Заказ №${order.id}` : "Заказ";
+      $("order-meta").innerHTML =
+        `${dateFmt.format(new Date(order.created_at))} · <span class="status ${order.status}">${STATUS_LABELS[order.status] ?? order.status}</span>`;
+      $("order-list").innerHTML = order.items.map(it => `
+        <div class="line">
+          <span class="name">${it.name}<small>${fmt.format(it.price)} × ${it.quantity}</small></span>
+          <span class="price">${fmt.format(it.price * it.quantity)}</span>
+        </div>`).join("");
+      $("order-total").textContent = fmt.format(order.amount);
     }
 
     function renderAuth() {
@@ -435,6 +745,7 @@
       $("user").hidden = !authed;
       $("user").textContent = state.email ?? "";
       $("btn-add").hidden = !authed;
+      $("btn-orders").hidden = !authed;
       $("btn-auth").textContent = authed ? "Выйти" : "Войти";
       $("source").className = `badge ${USE_MOCKS ? "mock" : "live"}`;
       $("source").textContent = USE_MOCKS ? "моки" : "live api";
@@ -443,10 +754,111 @@
     // ---------- события ----------
     ["search", "sort", "in-stock"].forEach(id => $(id).addEventListener("input", render));
 
+    // Кнопки в карточках вешаем делегированием: сетка перерисовывается целиком
+    $("grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const qty = state.cart[id] ?? 0;
+      setQty(id, btn.dataset.act === "dec" ? qty - 1 : qty + 1);
+    });
+
+    $("cart-list").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const qty = state.cart[id] ?? 0;
+      setQty(id, btn.dataset.act === "del" ? 0 : btn.dataset.act === "dec" ? qty - 1 : qty + 1);
+    });
+
+    document.querySelectorAll("button[data-close]").forEach(btn =>
+      btn.addEventListener("click", () => btn.closest("dialog").close())
+    );
+
+    $("btn-cart").addEventListener("click", () => {
+      $("cart-error").textContent = "";
+      renderCart();
+      $("dlg-cart").showModal();
+    });
+
+    $("cart-submit").addEventListener("click", () => {
+      if (!state.token) {
+        $("cart-error").textContent = "Сначала войди — заказы требуют авторизации";
+        return;
+      }
+      $("cart-error").textContent = "";
+      $("pay-error").textContent = "";
+      $("pay-total").textContent = $("cart-total").textContent;
+      $("dlg-pay").showModal();
+    });
+
+    // Имитация похода в платёжный шлюз. В реальной системе оплата — отдельный
+    // сервис: фронт получает от него подтверждение, а заказ создаёт бэкенд.
+    const fakePayment = () => new Promise(resolve => setTimeout(resolve, 1200));
+
+    $("pay-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const card = $("pay-card").value.replace(/\D/g, "");
+      if (card.length !== 16) {
+        $("pay-error").textContent = "Номер карты — 16 цифр";
+        return;
+      }
+      const order_items = cartLines().map(({ product, quantity }) => ({ product_id: product.id, quantity }));
+      const btn = $("pay-submit");
+      $("pay-error").textContent = "";
+      btn.disabled = true;
+      btn.textContent = "Проводим платёж…";
+      try {
+        await fakePayment();
+        const order = await api.createOrder(order_items);
+        state.cart = {};
+        localStorage.removeItem("cart");
+        render();
+        $("pay-card").value = "";
+        $("dlg-pay").close();
+        $("dlg-cart").close();
+        renderOrder(order);
+        $("dlg-order").showModal();
+      } catch (err) {
+        $("pay-error").textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Оплатить";
+      }
+    });
+
+    $("btn-orders").addEventListener("click", async () => {
+      $("orders-error").textContent = "";
+      $("orders-list").innerHTML = `<div class="muted">Загрузка…</div>`;
+      $("dlg-orders").showModal();
+      try {
+        state.orders = await api.listOrders();
+        renderOrders();
+      } catch (err) {
+        $("orders-list").innerHTML = "";
+        $("orders-error").textContent = err.message;
+      }
+    });
+
+    $("orders-list").addEventListener("click", async (e) => {
+      const row = e.target.closest("button[data-idx]");
+      if (!row) return;
+      const order = state.orders[Number(row.dataset.idx)];
+      // Если бэкенд не отдал id — показываем то, что уже пришло списком
+      try {
+        renderOrder(order.id ? await api.getOrder(order.id) : order);
+        $("dlg-order").showModal();
+      } catch (err) {
+        $("orders-error").textContent = err.message;
+      }
+    });
+
     $("btn-auth").addEventListener("click", () => {
       if (state.token) {
         state.token = state.email = null;
-        localStorage.clear();
+        state.orders = [];
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
         renderAuth();
       } else {
         $("auth-error").textContent = "";

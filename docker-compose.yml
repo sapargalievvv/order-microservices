@@ -1,9 +1,9 @@
-version: '3.8'
-
 services:
   # ==========================================
   # 1. ИНФРАСТРУКТУРА (БД, Кеш, Брокер)
   # ==========================================
+  # Порты БД, Redis и Kafka наружу оставлены намеренно:
+  # они нужны для alembic, psql и локального запуска сервисов без Docker.
 
   # База данных для User Service
   users_db:
@@ -34,10 +34,10 @@ services:
   products_db:
     image: postgres:16-alpine
     container_name: products_db
-    environment: 
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: postgres
-        POSTGRES_DB: products_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: products_db
     ports:
       - "5434:5432"
     volumes:
@@ -50,7 +50,6 @@ services:
     ports:
       - "6379:6379"
 
-  # Брокер сообщений Kafka (в режиме KRaft без Zookeeper)
   # Брокер сообщений Kafka (Официальный образ Apache в режиме KRaft)
   kafka:
     image: apache/kafka:3.7.0
@@ -73,6 +72,8 @@ services:
   # ==========================================
   # 2. МИКРОСЕРВИСЫ
   # ==========================================
+  # Порты наружу не публикуются: единственный вход в систему — api_gateway:8000.
+  # Внутри compose-сети сервисы доступны друг другу по имени контейнера.
 
   user_service:
     build:
@@ -86,39 +87,39 @@ services:
       - POSTGRES_HOST=users_db
       - POSTGRES_PORT=5432
       - USERS_DB_NAME=users_db
+      # Секрет нужен только эмитенту токенов (user-service) и гейтвею
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME_SECONDS=${JWT_LIFETIME_SECONDS}
     depends_on:
       - users_db
 
-  order_service:
+  orders_service:
     build:
       context: ./order-service
-    container_name: order-service
+    container_name: orders_service
     ports:
       - "8002:8002"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=orders_db
-      - POSTGRES_PORT=5432
+      # Внутри сети Postgres слушает 5432, а не проброшенный наружу 5433
+      - POSTGRES_ORDERS_DB_PORT=5432
       - ORDERS_DB_NAME=orders_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - JWT_SECRET=${JWT_SECRET}
+      - PRODUCTS_SERVICE_URL=http://products_service:8004
     depends_on:
       - orders_db
       - redis
       - kafka
+      - products_service
 
   products_service:
     build:
       context: ./products-service
     container_name: products_service
-    ports:
-    
-      - "8004:8004"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -127,7 +128,6 @@ services:
       - PRODUCTS_DB_NAME=products_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - products_db
@@ -138,12 +138,26 @@ services:
     build:
       context: ./notification-service
     container_name: notification_service
-    ports:
-      - "8003:8003"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - kafka
+
+  api_gateway:
+    build:
+      context: ./api-gateway
+    container_name: api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user_service:8001
+      - ORDER_SERVICE_URL=http://orders_service:8002
+      - PRODUCTS_SERVICE_URL=http://products_service:8004
+    depends_on:
+      - user_service
+      - orders_service
+      - products_service
 
 volumes:
   users_postgres_data:

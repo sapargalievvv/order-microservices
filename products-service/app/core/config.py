@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
-    JWT_SECRET: str
 
     @property
     def redis_url(self) -> str:

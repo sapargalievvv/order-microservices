@@ -16,12 +16,11 @@ class Settings(BaseSettings):
     # Redis Config
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
-    JWT_SECRET: str
 
     # Kafka Config
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9094"
 
-    PRODUCT_SERVICE_ULR: str = "http://127.0.0.1:8000"
+    PRODUCTS_SERVICE_URL: str = "http://localhost:8004"
 
     model_config = SettingsConfigDict(
         env_file="../.env",

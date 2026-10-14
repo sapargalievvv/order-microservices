@@ -78,14 +78,16 @@ async def delete_product(
 async def reserve_products(
     reserve_request: ReserveRequest,
     service: ProductService = Depends(get_product_service),
-    user_id: str = Depends(get_current_user_id),
 ):
     try:
         return await service.process_order_items(reserve_request.items)
     except ProductNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": "products_not_found", "product_ids": sorted(exc.product_ids)},
+            detail={
+                "error": "products_not_found",
+                "product_ids": sorted(exc.product_ids),
+            },
         )
     except InsufficientStock as exc:
         raise HTTPException(
